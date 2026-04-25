@@ -1,0 +1,18 @@
+# Secrets — never commit
+wiki/meta/secrets-registry.md
+
+# Raw assets (large binaries — sync via Syncthing instead)
+raw/assets/*.png
+raw/assets/*.jpg
+raw/assets/*.jpeg
+raw/assets/*.gif
+raw/assets/*.webp
+
+# Obsidian workspace state (local per-device)
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/cache
+
+# OS
+.DS_Store
+Thumbs.db
