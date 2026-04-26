@@ -122,6 +122,53 @@ The agent (Claude Code + `CLAUDE.md`) knows how to:
 
 ---
 
+## MCP setup
+
+baseline requires one MCP server: **`wiki_mcp.py`**, included in this repo. It gives Claude structured, vault-aware tools — search, read, write, patch, lint, ingest — so it never has to guess at file paths or parse raw directories.
+
+**Key libraries:**
+
+| Library | Purpose |
+|---|---|
+| [`fastmcp`](https://github.com/jlowin/fastmcp) | MCP server framework — exposes Python functions as Claude tools |
+| [`rank-bm25`](https://github.com/dorianbrown/rank_bm25) | BM25 full-text search over all wiki pages |
+| [`python-frontmatter`](https://github.com/eyeseast/python-frontmatter) | Reads and writes YAML frontmatter in markdown files |
+| [`pymupdf`](https://pymupdf.readthedocs.io) | PDF text extraction with page numbers (optional — markdown-only vaults don't need it) |
+
+**Install dependencies:**
+
+```bash
+pip install mcp[cli] fastmcp rank_bm25 python-frontmatter pymupdf
+```
+
+**Configure for your vault** — edit `.mcp.json` in the vault root (included as a template):
+
+```json
+{
+  "mcpServers": {
+    "wiki_mcp": {
+      "command": "python",
+      "args": ["/path/to/baseline/wiki_mcp.py"],
+      "env": { "WIKI_ROOT": "/path/to/baseline" }
+    }
+  }
+}
+```
+
+Claude Code reads `.mcp.json` automatically when you run `claude` from the vault root. Claude Desktop uses `~/.config/Claude/claude_desktop_config.json` with the same structure.
+
+**Without Claude Code — Claude Desktop or Claude web:**
+
+The full workflow runs on **Claude Desktop** without Claude Code. The tradeoffs:
+- `wiki_mcp.py` tools work identically
+- Paste `CLAUDE.md` content into your Project's system prompt
+- Git commits are handled by the [Obsidian Git](https://github.com/denolehov/obsidian-git) plugin instead of the agent
+- If the agent needs to access files outside the vault (e.g. OpenClaw skill files), add the [Filesystem MCP](https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem) alongside `wiki_mcp`
+
+**Claude web** works for queries and ingests but git is fully manual and session constraints make long maintenance runs awkward. Claude Desktop is the better non-CC option.
+
+---
+
 ## Quick start
 
 **Prerequisites:** [Obsidian](https://obsidian.md) (free), [Claude Code](https://claude.ai/code) (paid), Git

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "wiki_mcp": {
+      "command": "python",
+      "args": ["/path/to/baseline/wiki_mcp.py"],
+      "env": {
+        "WIKI_ROOT": "/path/to/baseline"
+      }
+    }
+  }
+}
