@@ -2,8 +2,8 @@
 
 **A homelab knowledge base that your AI agent maintains — structured so OpenClaw can act on it, not just read it.**
 
-> Clone it. Point Claude Code at it. Describe your first device.
-> Your wiki writes itself from there.
+> Point Claude Code at this repo. It handles most of the setup.
+> Then build your wiki conversationally — your agent earns autonomy as you gain trust in it.
 
 ---
 
@@ -66,6 +66,148 @@ baseline has page templates for every common homelab component:
 
 ---
 
+## Getting started
+
+### How setup works
+
+Point Claude Code at this repo and say `"Set up baseline"`. It will:
+
+- Run `setup.sh` — creates a Python venv, installs MCP dependencies, writes `.mcp.json` with correct absolute paths for your machine
+- Tell you exactly what it did and what you need to do next
+
+**You then restart Claude Code** (MCP servers load at startup — this step cannot be automated) and return to continue.
+
+| Step | Who |
+|---|---|
+| Clone repo, run `claude`, say "Set up baseline" | **You** |
+| Run `setup.sh`, verify paths, write `.mcp.json` | Claude Code |
+| Restart Claude Code | **You** — required, cannot be skipped |
+| Verify MCP tools loaded, run smoke test | Claude Code |
+| Open vault in Obsidian, enable plugins | **You** — GUI, cannot be automated |
+| Describe your first device | **You** |
+| Create system page, update topology, log change | Claude Code |
+
+---
+
+### Phase 1 — Installation
+
+```bash
+git clone https://github.com/Everyday-A-I/baseline my-homelab-wiki
+cd my-homelab-wiki
+claude
+```
+
+Then tell Claude Code:
+
+> **"Set up baseline"**
+
+Claude runs `setup.sh`, which installs dependencies, writes `.mcp.json`, and prints a summary. Review the output — confirm the paths look correct for your system.
+
+> ⚠️ **Human action required:** Restart Claude Code.
+> MCP servers are loaded at startup. The wiki tools are not available until you restart.
+
+After restarting, return to the vault and say:
+
+> **"Verify my baseline setup"**
+
+Claude will call `wiki_list` as a smoke test and confirm the MCP tools are live. If anything is wrong it will tell you what to fix.
+
+---
+
+### Phase 2 — Build your wiki
+
+With the MCP confirmed, describe your homelab conversationally. Start simple:
+
+> **"Add my primary router — it's an OpenWrt One at 192.168.1.1, running OpenWrt 24.x, and it's the LAN gateway with mwan3 managing WAN failover."**
+
+Claude creates `wiki/systems/openwrt-one.md`, updates `wiki/network/topology.md`, adds the device to `wiki/meta/device-registry.md`, and logs the change.
+
+**Review every page Claude creates** before adding more devices. This is how you build trust in the agent's output — and catch anything that doesn't match your setup.
+
+Work through your devices one at a time. For each one, Claude will:
+- Create the system page with all mandatory sections
+- Ask clarifying questions if specs are missing
+- Update the topology diagram
+- Log the change
+
+> ⚠️ **Human action required:** Read and approve each page before proceeding.
+> Don't rush this phase. A well-seeded wiki is the foundation everything else depends on.
+
+---
+
+### Phase 3 — Ingest documentation
+
+Once your devices are documented, start ingesting source material. Drop vendor PDFs, web articles, or paste Claude chat thread URLs.
+
+> **"Ingest raw/manuals/openwrt-one-quickstart.pdf"**
+> **"Ingest this thread: https://claude.ai/share/..."**
+
+Claude always presents an **Ingest Mode Menu** before writing anything:
+
+```
+A) Full synthesis    — extract all decisions and configs into structured pages
+B) Decision log only — extract architectural choices as an analysis entry
+C) Runbook extraction — identify procedures; draft as runbook stubs for review
+D) Raw summary only  — summarise to raw/articles/; flag pages to update later
+E) Review first      — show proposed structure; write nothing until you confirm
+```
+
+> ⚠️ **Human action required:** Choose the ingest mode. Option E (Review first) is recommended until you're confident in how the agent structures content.
+
+---
+
+### Phase 4 — Write and review runbooks
+
+Runbooks are the bridge between the wiki and OpenClaw automation. The agent drafts them; you decide when they're ready to be executed.
+
+> **"Draft a runbook for activating the standby router's LTE when primary WAN fails."**
+
+Claude drafts the runbook with all mandatory sections: Purpose, Prerequisites, Automation Metadata, Steps, Verification, Rollback, Known Pitfalls.
+
+> ⚠️ **Human action required:** Read every runbook — especially `## Steps` and `## Rollback` — before it's considered live.
+> Pay particular attention to:
+> - The exact commands in `## Steps`
+> - That every action has a `# ROLLBACK:` comment immediately below it
+> - The `estimated_impact` level in Automation Metadata
+> - That `requires_human_approval: true` is set (it always should be)
+
+Do not connect OpenClaw to runbooks you haven't read in full.
+
+---
+
+### Phase 5 — OpenClaw integration
+
+Once you have system pages with `health_baseline` blocks and at least a few reviewed runbooks, connect OpenClaw.
+
+Install and configure [OpenClaw](https://openclaw.ai), then point its skills at your wiki:
+
+- `wiki/meta/routing-state.md` — OpenClaw reads this before any network action
+- `wiki/meta/session-context.md` — loaded at session start
+- `wiki/systems/*.md` pages with `openclaw_monitor: true` — polled by corresponding skills
+
+> ⚠️ **Human action required:** Test each OpenClaw skill manually before enabling monitoring.
+> Run the skill, observe what it reads and proposes, confirm it interprets your wiki correctly.
+
+---
+
+### Phase 6 — Supervised automation
+
+With OpenClaw connected and skills verified, the system reaches its intended state: your agent monitors your homelab, detects issues against documented baselines, and proposes runbook executions — which you approve before anything runs.
+
+**This approval gate is permanent.** Every runbook has `requires_human_approval: true`. OpenClaw will always present the proposed commands, affected systems, and impact level via your configured channel (Telegram, Discord, etc.) before executing.
+
+The progression looks like this:
+
+```
+Week 1-2:  Wiki populated, all pages reviewed by you
+Week 3-4:  Runbooks drafted and read; test ingests working
+Month 2:   OpenClaw connected; skills tested manually
+Month 2+:  Supervised automation — you approve each execution
+Ongoing:   Trust builds; approval becomes a quick confirmation, not a review
+```
+
+---
+
 ## Example runbooks
 
 baseline ships with runbook templates for procedures like these. The agent writes the full content; you approve before anything executes.
@@ -122,96 +264,57 @@ The agent (Claude Code + `CLAUDE.md`) knows how to:
 
 ---
 
-## MCP setup
+## MCP setup (reference)
 
-baseline requires one MCP server: **`wiki_mcp.py`**, included in this repo. It gives Claude structured, vault-aware tools — search, read, write, patch, lint, ingest — so it never has to guess at file paths or parse raw directories.
+baseline requires one MCP server: **`wiki_mcp.py`**, included in this repo. `setup.sh` handles installation automatically. This section is reference only — you don't need to read it to get started.
+
+**What wiki_mcp provides:**
+
+| Tool | Purpose |
+|---|---|
+| `wiki_search` | BM25 full-text search across all wiki pages |
+| `wiki_read` | Read any file within the vault |
+| `wiki_write` | Create or overwrite a page (auto-backup before write) |
+| `wiki_patch` | Append or replace a named section without rewriting the page |
+| `wiki_list` | List pages, optionally filtered by category |
+| `wiki_index_rebuild` | Regenerate `wiki/index.md` from current vault state |
+| `wiki_log_append` | Append a timestamped entry to `wiki/log.md` |
+| `wiki_lint` | Health-check: orphans, broken links, missing frontmatter |
+| `wiki_ingest_raw` | Read raw source files — markdown or PDF with page numbers |
 
 **Key libraries:**
 
 | Library | Purpose |
 |---|---|
-| [`fastmcp`](https://github.com/jlowin/fastmcp) | MCP server framework — exposes Python functions as Claude tools |
-| [`rank-bm25`](https://github.com/dorianbrown/rank_bm25) | BM25 full-text search over all wiki pages |
-| [`python-frontmatter`](https://github.com/eyeseast/python-frontmatter) | Reads and writes YAML frontmatter in markdown files |
-| [`pymupdf`](https://pymupdf.readthedocs.io) | PDF text extraction with page numbers (optional — markdown-only vaults don't need it) |
+| [`fastmcp`](https://github.com/jlowin/fastmcp) | MCP server framework |
+| [`rank-bm25`](https://github.com/dorianbrown/rank_bm25) | Full-text search over wiki pages |
+| [`python-frontmatter`](https://github.com/eyeseast/python-frontmatter) | YAML frontmatter read/write |
+| [`pymupdf`](https://pymupdf.readthedocs.io) | PDF text extraction with page numbers (optional) |
 
-**Install dependencies into a dedicated venv** (Python 3.10+ required):
+**Manual install** (if not using `setup.sh`):
 
 ```bash
-python3 -m venv ~/baseline-venv
-~/baseline-venv/bin/pip install mcp[cli] fastmcp rank_bm25 python-frontmatter pymupdf
+python3 -m venv ~/.venvs/baseline
+~/.venvs/baseline/bin/pip install mcp[cli] fastmcp rank_bm25 python-frontmatter pymupdf
 ```
 
-**Configure for your vault** — edit `.mcp.json` in the vault root (included as a template). Replace the paths with your actual venv and vault locations:
-
-```json
-{
-  "mcpServers": {
-    "wiki_mcp": {
-      "command": "/home/you/baseline-venv/bin/python",
-      "args": ["/home/you/baseline/wiki_mcp.py"],
-      "env": { "WIKI_ROOT": "/home/you/baseline" }
-    }
-  }
-}
-```
-
-Use the full path to the venv's `python` binary — bare `python` is unreliable across systems and will silently use the wrong interpreter.
-
-Claude Code reads `.mcp.json` automatically when you run `claude` from the vault root. Claude Desktop uses `~/.config/Claude/claude_desktop_config.json` with the same structure.
+Then edit `.mcp.json` in the vault root — replace the template paths with your actual venv and vault locations. Use the full path to the venv's `python` binary (bare `python` is unreliable across systems).
 
 **Without Claude Code — Claude Desktop or Claude web:**
 
-The full workflow runs on **Claude Desktop** without Claude Code. The tradeoffs:
+The full workflow runs on **Claude Desktop** without Claude Code:
 - `wiki_mcp.py` tools work identically
 - Paste `CLAUDE.md` content into your Project's system prompt
-- Git commits are handled by the [Obsidian Git](https://github.com/denolehov/obsidian-git) plugin instead of the agent
-- If the agent needs to access files outside the vault (e.g. OpenClaw skill files), add the [Filesystem MCP](https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem) alongside `wiki_mcp`
+- Git commits are handled by the [Obsidian Git](https://github.com/denolehov/obsidian-git) plugin
+- If the agent needs to access files outside the vault, add the [Filesystem MCP](https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem)
 
 **Claude web** works for queries and ingests but git is fully manual and session constraints make long maintenance runs awkward. Claude Desktop is the better non-CC option.
 
 ---
 
-## Quick start
-
-**Prerequisites:** [Obsidian](https://obsidian.md) (free), [Claude Code](https://claude.ai/code) (paid), Git, Python 3.10+
-
-```bash
-# 1. Clone as your new vault
-git clone https://github.com/Everyday-A-I/baseline my-homelab-wiki
-cd my-homelab-wiki
-
-# 2. Create a venv and install MCP dependencies
-python3 -m venv ~/baseline-venv
-~/baseline-venv/bin/pip install mcp[cli] fastmcp rank_bm25 python-frontmatter pymupdf
-
-# 3. Edit .mcp.json — replace paths with your actual venv and vault locations
-#    "command": "/home/you/baseline-venv/bin/python"
-#    "args":    ["/home/you/my-homelab-wiki/wiki_mcp.py"]
-#    "WIKI_ROOT": "/home/you/my-homelab-wiki"
-
-# 4. Open in Obsidian
-# File → Open Vault → select the my-homelab-wiki folder
-# Plugins are pre-configured — accept the prompts to enable them
-
-# 5. Start Claude Code in the vault root
-claude
-
-# 6. Describe your first device
-# "Add my Synology DS923+ NAS at 192.168.1.50 — it runs DSM 7.2,
-#  has 4 bays, and is my primary backup target."
-
-# 7. Claude creates the system page, updates the topology diagram,
-#    adds it to the device registry, and logs the change.
-```
-
-Browse the [`example`](https://github.com/Everyday-A-I/baseline/tree/example) branch to see what a populated vault looks like before you start.
-
----
-
 ## Obsidian
 
-baseline is built as an Obsidian vault. [Obsidian](https://obsidian.md) is a free, local-first markdown editor with a rich plugin ecosystem — your wiki is just files on disk, no vendor lock-in.
+baseline is built as an Obsidian vault. [Obsidian](https://obsidian.md) is a free, local-first markdown editor — your wiki is plain markdown files on disk, no vendor lock-in.
 
 The vault comes pre-configured with four plugins:
 
@@ -220,9 +323,11 @@ The vault comes pre-configured with four plugins:
 | [Dataview](https://github.com/blacksmithgu/obsidian-dataview) | Query your wiki like a database — dynamic device tables, status views |
 | [Homepage](https://github.com/mirnovov/obsidian-homepage) | Opens `wiki/index.md` automatically on vault launch |
 | [Excalidraw](https://github.com/zsviczian/obsidian-excalidraw-plugin) | Freehand architecture sketches embedded in pages |
-| [Obsidian Git](https://github.com/denolehov/obsidian-git) | Commit and push from inside Obsidian without touching a terminal |
+| [Obsidian Git](https://github.com/denolehov/obsidian-git) | Commit and push from inside Obsidian without a terminal |
 
-**Useful commands** (open the command palette with `Ctrl/Cmd + P`):
+Obsidian is the reading interface — you don't need it for the agent workflow, but it makes navigating a populated wiki significantly easier.
+
+**Useful commands** (`Ctrl/Cmd + P`):
 
 | Command | What it does |
 |---|---|
@@ -230,11 +335,10 @@ The vault comes pre-configured with four plugins:
 | `Obsidian Git: Pull` | Pull latest from remote |
 | `Dataview: Rebuild index` | Refresh all dynamic queries |
 | `Open graph view` | Visualise connections across all wiki pages |
-| `Excalidraw: Create new drawing` | Start a freehand diagram |
-| `Quick switcher: Open quick switcher` | Jump to any page instantly (`Ctrl/Cmd + O`) |
+| `Quick switcher: Open quick switcher` | Jump to any page (`Ctrl/Cmd + O`) |
 | `Toggle live preview / source mode` | Switch between rendered and raw markdown |
 
-Mermaid diagrams (topology, routing) render natively in Obsidian — no plugin required.
+Mermaid diagrams (topology, routing) render natively — no plugin required.
 
 ---
 
@@ -244,7 +348,7 @@ baseline documents *that* secrets exist and *where* to find them — never the v
 
 Works with any password manager:
 
-- **[KeePassXC](https://keepassxc.org)** — local vault, CLI access via `keepassxc-cli`
+- **[KeePassXC](https://keepassxc.org)** — local vault, CLI via `keepassxc-cli`
 - **[Bitwarden](https://bitwarden.com) / [Vaultwarden](https://github.com/dani-garcia/vaultwarden)** — cloud or self-hosted, CLI via `bw`
 - **[1Password](https://1password.com)** — CLI via `op`
 
@@ -289,7 +393,7 @@ automation:
   affected_systems: [openwrt-one, quectel-rm520n]
 ```
 
-OpenClaw reads `wiki/meta/routing-state.md` before any network action. It reads `wiki/meta/session-context.md` at session start. Human approval is always required before any runbook that modifies system state.
+OpenClaw reads `wiki/meta/routing-state.md` before any network action. It reads `wiki/meta/session-context.md` at session start. Human approval is always required before any runbook that modifies system state — this is a permanent constraint, not a training-wheels setting.
 
 ---
 
@@ -312,8 +416,9 @@ The agent updates `wiki/meta/routing-state.md` after every scheme change and gen
 ```
 baseline/
 ├── CLAUDE.md                   ← agent instructions (the core of this project)
-├── wiki_mcp.py                 ← MCP server (run this; point WIKI_ROOT at your vault)
-├── .mcp.json                   ← MCP config template (edit paths before first run)
+├── wiki_mcp.py                 ← MCP server (run via .mcp.json; do not edit unless extending)
+├── .mcp.json                   ← MCP config template (setup.sh writes your real paths here)
+├── setup.sh                    ← run once after cloning; handles venv, deps, .mcp.json
 ├── wiki/
 │   ├── index.md                ← master catalog
 │   ├── log.md                  ← append-only change log
