@@ -135,25 +135,28 @@ baseline requires one MCP server: **`wiki_mcp.py`**, included in this repo. It g
 | [`python-frontmatter`](https://github.com/eyeseast/python-frontmatter) | Reads and writes YAML frontmatter in markdown files |
 | [`pymupdf`](https://pymupdf.readthedocs.io) | PDF text extraction with page numbers (optional — markdown-only vaults don't need it) |
 
-**Install dependencies:**
+**Install dependencies into a dedicated venv** (Python 3.10+ required):
 
 ```bash
-pip install mcp[cli] fastmcp rank_bm25 python-frontmatter pymupdf
+python3 -m venv ~/baseline-venv
+~/baseline-venv/bin/pip install mcp[cli] fastmcp rank_bm25 python-frontmatter pymupdf
 ```
 
-**Configure for your vault** — edit `.mcp.json` in the vault root (included as a template):
+**Configure for your vault** — edit `.mcp.json` in the vault root (included as a template). Replace the paths with your actual venv and vault locations:
 
 ```json
 {
   "mcpServers": {
     "wiki_mcp": {
-      "command": "python",
-      "args": ["/path/to/baseline/wiki_mcp.py"],
-      "env": { "WIKI_ROOT": "/path/to/baseline" }
+      "command": "/home/you/baseline-venv/bin/python",
+      "args": ["/home/you/baseline/wiki_mcp.py"],
+      "env": { "WIKI_ROOT": "/home/you/baseline" }
     }
   }
 }
 ```
+
+Use the full path to the venv's `python` binary — bare `python` is unreliable across systems and will silently use the wrong interpreter.
 
 Claude Code reads `.mcp.json` automatically when you run `claude` from the vault root. Claude Desktop uses `~/.config/Claude/claude_desktop_config.json` with the same structure.
 
@@ -171,25 +174,34 @@ The full workflow runs on **Claude Desktop** without Claude Code. The tradeoffs:
 
 ## Quick start
 
-**Prerequisites:** [Obsidian](https://obsidian.md) (free), [Claude Code](https://claude.ai/code) (paid), Git
+**Prerequisites:** [Obsidian](https://obsidian.md) (free), [Claude Code](https://claude.ai/code) (paid), Git, Python 3.10+
 
 ```bash
 # 1. Clone as your new vault
 git clone https://github.com/Everyday-A-I/baseline my-homelab-wiki
 cd my-homelab-wiki
 
-# 2. Open in Obsidian
+# 2. Create a venv and install MCP dependencies
+python3 -m venv ~/baseline-venv
+~/baseline-venv/bin/pip install mcp[cli] fastmcp rank_bm25 python-frontmatter pymupdf
+
+# 3. Edit .mcp.json — replace paths with your actual venv and vault locations
+#    "command": "/home/you/baseline-venv/bin/python"
+#    "args":    ["/home/you/my-homelab-wiki/wiki_mcp.py"]
+#    "WIKI_ROOT": "/home/you/my-homelab-wiki"
+
+# 4. Open in Obsidian
 # File → Open Vault → select the my-homelab-wiki folder
 # Plugins are pre-configured — accept the prompts to enable them
 
-# 3. Start Claude Code in the vault root
+# 5. Start Claude Code in the vault root
 claude
 
-# 4. Describe your first device
+# 6. Describe your first device
 # "Add my Synology DS923+ NAS at 192.168.1.50 — it runs DSM 7.2,
 #  has 4 bays, and is my primary backup target."
 
-# 5. Claude creates the system page, updates the topology diagram,
+# 7. Claude creates the system page, updates the topology diagram,
 #    adds it to the device registry, and logs the change.
 ```
 
@@ -300,6 +312,8 @@ The agent updates `wiki/meta/routing-state.md` after every scheme change and gen
 ```
 baseline/
 ├── CLAUDE.md                   ← agent instructions (the core of this project)
+├── wiki_mcp.py                 ← MCP server (run this; point WIKI_ROOT at your vault)
+├── .mcp.json                   ← MCP config template (edit paths before first run)
 ├── wiki/
 │   ├── index.md                ← master catalog
 │   ├── log.md                  ← append-only change log
