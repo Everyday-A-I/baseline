@@ -9,7 +9,9 @@
 
 ## What this is
 
-baseline is an [Obsidian](https://obsidian.md) vault template designed to be maintained by [Claude Code](https://claude.ai/code) and consumed by [OpenClaw](https://openclaw.ai). It gives your homelab agent a persistent, structured memory — runbooks it can execute, health baselines it can monitor against, and a routing state machine it can read before touching your network.
+baseline is an [Obsidian](https://obsidian.md) vault template designed to be maintained by [Claude Code](https://claude.ai/code) and consumed by [OpenClaw](https://openclaw.ai). It gives your homelab agent a persistent, structured memory — runbooks it can execute, health baselines it can monitor against, and live state files it reads before touching anything.
+
+**The wiki lives on your machine** as plain markdown files. Obsidian reads it locally. The Obsidian Git plugin commits changes and pushes to your GitHub remote as a versioned backup. Syncthing (optional) keeps it in sync across devices in real time. Nothing requires a cloud account to function.
 
 Most homelab wikis are static. You write them, they drift, you stop trusting them.
 baseline is different: the agent keeps it current as your setup evolves.
@@ -39,16 +41,14 @@ You don't need all three on day one. baseline is useful as a structured wiki eve
 | | Static wiki (Wikijs, Bookstack, Notion) | baseline |
 |---|---|---|
 | Stays up to date | You maintain it manually | Agent updates it when things change |
-| Machine-readable runbooks | No | Yes — OpenClaw can execute them |
-| Routing state tracking | No | `routing-state.md` is a live state machine |
+| Machine-readable runbooks | No | Yes — OpenClaw can execute them with your approval |
+| Live state tracking | No | Routing, power, VPN, services, backups, certs, updates |
 | Ingest from PDFs, chat threads, articles | Copy-paste | Structured ingest workflow with mode menu |
 | Secrets integration | Varies | Password manager paths only — values never stored |
 
 ---
 
 ## What you can document
-
-baseline has page templates for every common homelab component:
 
 **Networking** — OpenWrt One, GL.iNet routers, 5G/LTE modems, WireGuard, ZeroTier, sing-box, VLANs, firewall rules, DNS, routing failover schemes
 
@@ -70,12 +70,13 @@ baseline has page templates for every common homelab component:
 
 ### How setup works
 
-Point Claude Code at this repo and say `"Set up baseline"`. It will:
+Point Claude Code at this repo and say `"Set up baseline"`. It will run `setup.sh`, which:
+- Checks Python 3.10+
+- Creates a dedicated venv at `~/.venvs/baseline`
+- Installs MCP dependencies
+- Writes `.mcp.json` with correct absolute paths for your machine
 
-- Run `setup.sh` — creates a Python venv, installs MCP dependencies, writes `.mcp.json` with correct absolute paths for your machine
-- Tell you exactly what it did and what you need to do next
-
-**You then restart Claude Code** (MCP servers load at startup — this step cannot be automated) and return to continue.
+You then restart Claude Code (MCP servers load at startup — this cannot be automated) and return to continue.
 
 | Step | Who |
 |---|---|
@@ -87,327 +88,142 @@ Point Claude Code at this repo and say `"Set up baseline"`. It will:
 | Describe your first device | **You** |
 | Create system page, update topology, log change | Claude Code |
 
----
-
-### Phase 1 — Installation
-
 ```bash
 git clone https://github.com/Everyday-A-I/baseline my-homelab-wiki
 cd my-homelab-wiki
 claude
+# say: "Set up baseline"
 ```
 
-Then tell Claude Code:
+→ See [docs/mcp-setup.md](docs/mcp-setup.md) for manual installation and multi-vault configuration.
+
+---
+
+### Phase 1 — Installation
+
+After cloning and running `claude`, say:
 
 > **"Set up baseline"**
 
-Claude runs `setup.sh`, which installs dependencies, writes `.mcp.json`, and prints a summary. Review the output — confirm the paths look correct for your system.
+Claude runs `setup.sh` and prints a summary. Review the output — confirm the paths look correct. Then:
 
-> ⚠️ **Human action required:** Restart Claude Code.
-> MCP servers are loaded at startup. The wiki tools are not available until you restart.
+> ⚠️ **Human action required: restart Claude Code.**
+> MCP servers load at startup. Wiki tools are not available until you restart.
 
-After restarting, return to the vault and say:
+After restarting, say:
 
 > **"Verify my baseline setup"**
 
-Claude will call `wiki_list` as a smoke test and confirm the MCP tools are live. If anything is wrong it will tell you what to fix.
+Claude calls `wiki_list` as a smoke test and confirms the tools are live.
 
 ---
 
 ### Phase 2 — Build your wiki
 
-With the MCP confirmed, describe your homelab conversationally. Start simple:
+Describe your homelab conversationally, one device at a time:
 
-> **"Add my primary router — it's an OpenWrt One at 192.168.1.1, running OpenWrt 24.x, and it's the LAN gateway with mwan3 managing WAN failover."**
+> **"Add my primary router — OpenWrt One at 192.168.1.1, running OpenWrt 24.x, LAN gateway with mwan3 failover."**
 
-Claude creates `wiki/systems/openwrt-one.md`, updates `wiki/network/topology.md`, adds the device to `wiki/meta/device-registry.md`, and logs the change.
+Claude creates the system page, updates the topology diagram, adds the device to the registry, and logs the change.
 
-**Review every page Claude creates** before adding more devices. This is how you build trust in the agent's output — and catch anything that doesn't match your setup.
-
-Work through your devices one at a time. For each one, Claude will:
-- Create the system page with all mandatory sections
-- Ask clarifying questions if specs are missing
-- Update the topology diagram
-- Log the change
-
-> ⚠️ **Human action required:** Read and approve each page before proceeding.
-> Don't rush this phase. A well-seeded wiki is the foundation everything else depends on.
+> ⚠️ **Human action required: read every page Claude creates before adding the next device.**
+> A well-seeded wiki is the foundation everything else depends on. Don't rush this phase.
 
 ---
 
 ### Phase 3 — Ingest documentation
 
-Once your devices are documented, start ingesting source material. Drop vendor PDFs, web articles, or paste Claude chat thread URLs.
+Drop PDFs, articles, or Claude chat thread URLs into the vault:
 
 > **"Ingest raw/manuals/openwrt-one-quickstart.pdf"**
-> **"Ingest this thread: https://claude.ai/share/..."**
 
 Claude always presents an **Ingest Mode Menu** before writing anything:
 
 ```
 A) Full synthesis    — extract all decisions and configs into structured pages
-B) Decision log only — extract architectural choices as an analysis entry
-C) Runbook extraction — identify procedures; draft as runbook stubs for review
+B) Decision log only — architectural choices as an analysis entry only
+C) Runbook extraction — identify procedures; draft stubs for your review
 D) Raw summary only  — summarise to raw/articles/; flag pages to update later
-E) Review first      — show proposed structure; write nothing until you confirm
+E) Review first      — show proposed structure; write nothing until confirmed
 ```
 
-> ⚠️ **Human action required:** Choose the ingest mode. Option E (Review first) is recommended until you're confident in how the agent structures content.
+> ⚠️ **Human action required: choose the ingest mode.** Option E recommended until you're confident in how the agent structures content.
 
 ---
 
 ### Phase 4 — Write and review runbooks
 
-Runbooks are the bridge between the wiki and OpenClaw automation. The agent drafts them; you decide when they're ready to be executed.
+> **"Draft a runbook for activating standby LTE when primary WAN fails."**
 
-> **"Draft a runbook for activating the standby router's LTE when primary WAN fails."**
+Claude drafts the runbook with all mandatory sections.
 
-Claude drafts the runbook with all mandatory sections: Purpose, Prerequisites, Automation Metadata, Steps, Verification, Rollback, Known Pitfalls.
-
-> ⚠️ **Human action required:** Read every runbook — especially `## Steps` and `## Rollback` — before it's considered live.
-> Pay particular attention to:
-> - The exact commands in `## Steps`
-> - That every action has a `# ROLLBACK:` comment immediately below it
-> - The `estimated_impact` level in Automation Metadata
-> - That `requires_human_approval: true` is set (it always should be)
-
-Do not connect OpenClaw to runbooks you haven't read in full.
+> ⚠️ **Human action required: read every runbook in full before it's considered live.**
+> Check `## Steps`, every `# ROLLBACK:` comment, and `estimated_impact`.
+> Do not connect OpenClaw to runbooks you haven't read.
 
 ---
 
 ### Phase 5 — OpenClaw integration
 
-Once you have system pages with `health_baseline` blocks and at least a few reviewed runbooks, connect OpenClaw.
+Once you have reviewed system pages and runbooks, connect OpenClaw. Test each skill manually before enabling monitoring.
 
-Install and configure [OpenClaw](https://openclaw.ai), then point its skills at your wiki:
+> ⚠️ **Human action required: verify each OpenClaw skill reads your wiki correctly before enabling it.**
 
-- `wiki/meta/routing-state.md` — OpenClaw reads this before any network action
-- `wiki/meta/session-context.md` — loaded at session start
-- `wiki/systems/*.md` pages with `openclaw_monitor: true` — polled by corresponding skills
-
-> ⚠️ **Human action required:** Test each OpenClaw skill manually before enabling monitoring.
-> Run the skill, observe what it reads and proposes, confirm it interprets your wiki correctly.
+→ See [docs/openclaw.md](docs/openclaw.md) for connection details and skill setup.
 
 ---
 
 ### Phase 6 — Supervised automation
 
-With OpenClaw connected and skills verified, the system reaches its intended state: your agent monitors your homelab, detects issues against documented baselines, and proposes runbook executions — which you approve before anything runs.
+OpenClaw monitors your homelab, detects issues against documented baselines, and proposes runbook executions — which you approve before anything runs.
 
-**This approval gate is permanent.** Every runbook has `requires_human_approval: true`. OpenClaw will always present the proposed commands, affected systems, and impact level via your configured channel (Telegram, Discord, etc.) before executing.
-
-The progression looks like this:
+**The approval gate is permanent.** `requires_human_approval: true` is an architectural constraint, not a training-wheels setting.
 
 ```
-Week 1-2:  Wiki populated, all pages reviewed by you
-Week 3-4:  Runbooks drafted and read; test ingests working
+Week 1–2:  Wiki populated; all pages reviewed by you
+Week 3–4:  Runbooks drafted and read; test ingests working
 Month 2:   OpenClaw connected; skills tested manually
 Month 2+:  Supervised automation — you approve each execution
-Ongoing:   Trust builds; approval becomes a quick confirmation, not a review
+Ongoing:   Trust builds; approval becomes a quick confirm, not a review
 ```
 
 ---
 
 ## Example runbooks
 
-baseline ships with runbook templates for procedures like these. The agent writes the full content; you approve before anything executes.
+The agent drafts these from your descriptions; you approve before anything executes.
 
-**Networking & connectivity**
-- WAN failover: activate standby router LTE (Scheme B)
-- Full router takeover: standby becomes LAN gateway (Scheme C)
-- Return to normal routing after failover (Scheme A restore)
-- ZeroTier member troubleshooting and re-authorisation
-- DNS record update and propagation verification
-- Firewall rule change with rollback
+**Networking & connectivity** — WAN failover (Scheme B), full router takeover (Scheme C), restore normal routing (Scheme A), ZeroTier re-authorisation, DNS update, firewall rule change with rollback
 
-**Infrastructure & services**
-- Proxmox VM snapshot before a risky change
-- Docker container update via Portainer with rollback
-- SSL/TLS certificate renewal (Let's Encrypt / ACME)
-- Synology DSM update with pre-check and rollback
-- Grafana dashboard backup and restore
+**Infrastructure & services** — Proxmox VM snapshot, Docker container update with rollback, SSL/TLS renewal, Synology DSM update, Grafana dashboard backup
 
-**Data & backups**
-- NAS backup job verification and integrity check
-- Offsite backup sync confirmation
-- Home Assistant full backup before major update
+**Data & backups** — NAS backup verification, offsite sync confirmation, Home Assistant backup
 
-**Devices & firmware**
-- Victron EasySolar GX firmware update
-- OpenWrt package update with sysupgrade fallback
-- New device onboarding: system page + topology + device registry in one pass
+**Devices & firmware** — Victron EasySolar GX firmware update, OpenWrt sysupgrade, new device onboarding (system page + topology + registry in one pass)
 
-**Automation**
-- NodeRED flow export and version snapshot
-- Home Assistant automation audit (unused entities, stale automations)
+**Automation** — NodeRED flow export, Home Assistant automation audit
 
-Every runbook includes a `## Rollback` section and `requires_human_approval: true` — the agent never executes without confirmation.
+Every runbook includes `## Rollback` and `requires_human_approval: true`.
+
+→ See [docs/routing.md](docs/routing.md) for the full routing failover state machine.
 
 ---
 
-## How it works
+## Live state files
 
-The vault has two layers:
+baseline tracks seven categories of state in `wiki/meta/`. These are agent-maintained files that OpenClaw reads before acting — a snapshot of "what is the homelab doing right now."
 
-```
-raw/        ← your source material (PDFs, articles, transcripts) — never modified by agent
-wiki/       ← the living knowledge base — agent writes here only
-```
-
-The agent (Claude Code + `CLAUDE.md`) knows how to:
-- **Ingest** a vendor PDF, web article, or Claude chat thread and file it correctly
-- **Create system pages** with health baselines OpenClaw can monitor against
-- **Write and update runbooks** with automation metadata OpenClaw can execute
-- **Track routing state** across three failover schemes (A: normal, B: standby WAN, C: full takeover)
-- **Log every change** to an append-only `wiki/log.md`
-- **Lint** the vault for orphan pages, broken links, and stale state
-
----
-
-## MCP setup (reference)
-
-baseline requires one MCP server: **`wiki_mcp.py`**, included in this repo. `setup.sh` handles installation automatically. This section is reference only — you don't need to read it to get started.
-
-**What wiki_mcp provides:**
-
-| Tool | Purpose |
+| File | Tracks |
 |---|---|
-| `wiki_search` | BM25 full-text search across all wiki pages |
-| `wiki_read` | Read any file within the vault |
-| `wiki_write` | Create or overwrite a page (auto-backup before write) |
-| `wiki_patch` | Append or replace a named section without rewriting the page |
-| `wiki_list` | List pages, optionally filtered by category |
-| `wiki_index_rebuild` | Regenerate `wiki/index.md` from current vault state |
-| `wiki_log_append` | Append a timestamped entry to `wiki/log.md` |
-| `wiki_lint` | Health-check: orphans, broken links, missing frontmatter |
-| `wiki_ingest_raw` | Read raw source files — markdown or PDF with page numbers |
+| `meta/routing-state.md` | Active WAN scheme, router status, gateway IP |
+| `meta/power-state.md` | Battery SoC, grid/solar/inverter mode, load watts |
+| `meta/vpn-state.md` | ZeroTier/WireGuard node reachability |
+| `meta/service-state.md` | Critical services up/down/degraded |
+| `meta/backup-state.md` | Last successful backup per target |
+| `meta/cert-state.md` | SSL certificate expiry dates |
+| `meta/update-state.md` | Pending firmware/package updates per device |
 
-**Key libraries:**
-
-| Library | Purpose |
-|---|---|
-| [`fastmcp`](https://github.com/jlowin/fastmcp) | MCP server framework |
-| [`rank-bm25`](https://github.com/dorianbrown/rank_bm25) | Full-text search over wiki pages |
-| [`python-frontmatter`](https://github.com/eyeseast/python-frontmatter) | YAML frontmatter read/write |
-| [`pymupdf`](https://pymupdf.readthedocs.io) | PDF text extraction with page numbers (optional) |
-
-**Manual install** (if not using `setup.sh`):
-
-```bash
-python3 -m venv ~/.venvs/baseline
-~/.venvs/baseline/bin/pip install mcp[cli] fastmcp rank_bm25 python-frontmatter pymupdf
-```
-
-Then edit `.mcp.json` in the vault root — replace the template paths with your actual venv and vault locations. Use the full path to the venv's `python` binary (bare `python` is unreliable across systems).
-
-**Without Claude Code — Claude Desktop or Claude web:**
-
-The full workflow runs on **Claude Desktop** without Claude Code:
-- `wiki_mcp.py` tools work identically
-- Paste `CLAUDE.md` content into your Project's system prompt
-- Git commits are handled by the [Obsidian Git](https://github.com/denolehov/obsidian-git) plugin
-- If the agent needs to access files outside the vault, add the [Filesystem MCP](https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem)
-
-**Claude web** works for queries and ingests but git is fully manual and session constraints make long maintenance runs awkward. Claude Desktop is the better non-CC option.
-
----
-
-## Obsidian
-
-baseline is built as an Obsidian vault. [Obsidian](https://obsidian.md) is a free, local-first markdown editor — your wiki is plain markdown files on disk, no vendor lock-in.
-
-The vault comes pre-configured with four plugins:
-
-| Plugin | Purpose |
-|---|---|
-| [Dataview](https://github.com/blacksmithgu/obsidian-dataview) | Query your wiki like a database — dynamic device tables, status views |
-| [Homepage](https://github.com/mirnovov/obsidian-homepage) | Opens `wiki/index.md` automatically on vault launch |
-| [Excalidraw](https://github.com/zsviczian/obsidian-excalidraw-plugin) | Freehand architecture sketches embedded in pages |
-| [Obsidian Git](https://github.com/denolehov/obsidian-git) | Commit and push from inside Obsidian without a terminal |
-
-Obsidian is the reading interface — you don't need it for the agent workflow, but it makes navigating a populated wiki significantly easier.
-
-**Useful commands** (`Ctrl/Cmd + P`):
-
-| Command | What it does |
-|---|---|
-| `Obsidian Git: Commit all changes` | Snapshot the vault to git |
-| `Obsidian Git: Pull` | Pull latest from remote |
-| `Dataview: Rebuild index` | Refresh all dynamic queries |
-| `Open graph view` | Visualise connections across all wiki pages |
-| `Quick switcher: Open quick switcher` | Jump to any page (`Ctrl/Cmd + O`) |
-| `Toggle live preview / source mode` | Switch between rendered and raw markdown |
-
-Mermaid diagrams (topology, routing) render natively — no plugin required.
-
----
-
-## Secrets integration
-
-baseline documents *that* secrets exist and *where* to find them — never the values themselves. The `wiki/meta/secrets-registry.md` file is gitignored.
-
-Works with any password manager:
-
-- **[KeePassXC](https://keepassxc.org)** — local vault, CLI via `keepassxc-cli`
-- **[Bitwarden](https://bitwarden.com) / [Vaultwarden](https://github.com/dani-garcia/vaultwarden)** — cloud or self-hosted, CLI via `bw`
-- **[1Password](https://1password.com)** — CLI via `op`
-
-Runbooks reference secrets by path only:
-
-```bash
-# KeePassXC
-keepassxc-cli show -a password ~/vault.kdbx "Homelab/<primary-router> root"
-
-# Bitwarden / Vaultwarden
-bw get password "Homelab/<primary-router> root"
-
-# 1Password
-op item get "<primary-router> root" --fields password
-```
-
----
-
-## OpenClaw integration
-
-Every system page can include a `health_baseline` block:
-
-```yaml
-health_baseline:
-  interfaces: [wwan0]
-  wan_ping_loss_pct_max: 2
-  wwan_session_min_uptime_pct: 99
-openclaw_monitor: true
-openclaw_skill: homelab/monitor-openwrt-one
-```
-
-Every runbook includes an `## Automation Metadata` block:
-
-```yaml
-automation:
-  trigger_conditions:
-    - "wwan0 interface down"
-  requires_human_approval: true
-  approval_timeout_seconds: 120
-  estimated_impact: low
-  idempotent: true
-  affected_systems: [openwrt-one, quectel-rm520n]
-```
-
-OpenClaw reads `wiki/meta/routing-state.md` before any network action. It reads `wiki/meta/session-context.md` at session start. Human approval is always required before any runbook that modifies system state — this is a permanent constraint, not a training-wheels setting.
-
----
-
-## Routing failover
-
-baseline includes a three-scheme routing state machine designed for dual-WAN homelabs:
-
-| Scheme | Condition | Action |
-|---|---|---|
-| **A — Normal** | All links healthy | mwan3 manages WAN failover automatically |
-| **B — Standby WAN** | Primary WAN links failed | DHCP option 3 redirected to standby router's LTE |
-| **C — Full takeover** | Primary router down | Standby router takes over as LAN gateway |
-
-The agent updates `wiki/meta/routing-state.md` after every scheme change and generates the runbooks for B → A and C → A return paths.
+The agent updates the relevant file after any action that changes state.
 
 ---
 
@@ -416,22 +232,29 @@ The agent updates `wiki/meta/routing-state.md` after every scheme change and gen
 ```
 baseline/
 ├── CLAUDE.md                   ← agent instructions (the core of this project)
-├── wiki_mcp.py                 ← MCP server (run via .mcp.json; do not edit unless extending)
-├── .mcp.json                   ← MCP config template (setup.sh writes your real paths here)
-├── setup.sh                    ← run once after cloning; handles venv, deps, .mcp.json
+├── wiki_mcp.py                 ← MCP server (run via .mcp.json)
+├── .mcp.json                   ← MCP config template (setup.sh writes real paths here)
+├── setup.sh                    ← run once after cloning
+├── docs/                       ← reference documentation
+│   ├── mcp-setup.md
+│   ├── obsidian.md
+│   ├── openclaw.md
+│   ├── routing.md
+│   ├── secrets.md
+│   └── configs.md
 ├── wiki/
-│   ├── index.md                ← master catalog
-│   ├── log.md                  ← append-only change log
-│   ├── systems/                ← one page per device
-│   ├── runbooks/               ← executable procedures
-│   ├── cheatsheets/            ← quick reference
-│   ├── configs/                ← annotated config snapshots
-│   ├── network/                ← topology, routing, DNS, VPN, firewall
-│   ├── concepts/               ← technology explanations
-│   ├── troubleshooting/        ← symptom → diagnosis → resolution
-│   ├── analyses/               ← architectural decisions
-│   ├── experiments/            ← exploratory work
-│   └── meta/                   ← device registry, routing state, session context
+│   ├── index.md
+│   ├── log.md
+│   ├── systems/
+│   ├── runbooks/
+│   ├── cheatsheets/
+│   ├── configs/                ← annotated config snapshots (see docs/configs.md)
+│   ├── network/
+│   ├── concepts/
+│   ├── troubleshooting/
+│   ├── analyses/
+│   ├── experiments/
+│   └── meta/                   ← live state files + device registry + session context
 └── raw/                        ← source material (read-only to agent)
     ├── manuals/
     ├── articles/
