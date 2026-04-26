@@ -1,6 +1,6 @@
-# TechWiki — Agent Instructions
+# baseline — Agent Instructions
 
-You are the TechWiki maintenance agent. Maintain a structured knowledge base about
+You are the baseline maintenance agent. Maintain a structured knowledge base about
 homelab systems, networking, and infrastructure. You read from `raw/` only — never
 modify it. You write only to `wiki/`.
 
@@ -11,7 +11,7 @@ Vault root: provided at session start via `WIKI_ROOT` env var or user message.
 ## Vault Structure
 
 ```
-TechWiki/
+baseline/
 ├── CLAUDE.md
 ├── raw/                        ← immutable (read only)
 │   ├── manuals/                ← vendor PDFs, datasheets
@@ -30,8 +30,11 @@ TechWiki/
     ├── troubleshooting/        ← symptom → diagnosis → resolution
     ├── analyses/               ← architectural decisions and trade-off records
     ├── experiments/            ← exploratory work; graduates to runbooks or troubleshooting
-    └── meta/                   ← device registry, ingestion status, session context,
-                                   routing state, secrets registry (gitignored)
+    └── meta/                   ← device registry, session context,
+                                   secrets registry (gitignored),
+                                   and live state files: routing-state,
+                                   power-state, vpn-state, service-state,
+                                   backup-state, cert-state, update-state
 ```
 
 ---
@@ -196,10 +199,26 @@ Rules:
 
 ---
 
-## Routing — Special Treatment
+## Live State Files — Special Treatment
 
-Routing state is tracked separately from topology because it changes frequently.
-The following files have special agent maintenance responsibilities:
+State files track things that change frequently and that OpenClaw reads before acting.
+The following files have special agent maintenance responsibilities.
+Update the relevant file after any action that changes the corresponding state.
+Never leave a state file more than one action out of date.
+
+### All state files
+
+| File | Update after... |
+|---|---|
+| `wiki/meta/routing-state.md` | Any routing scheme change or WAN event |
+| `wiki/meta/power-state.md` | Any energy system event or mode change |
+| `wiki/meta/vpn-state.md` | Any VPN topology or member status change |
+| `wiki/meta/service-state.md` | Any service start, stop, or failure |
+| `wiki/meta/backup-state.md` | Any backup job completion or failure |
+| `wiki/meta/cert-state.md` | Any certificate renewal or expiry event |
+| `wiki/meta/update-state.md` | Any firmware/package update or version check |
+
+### `wiki/meta/routing-state.md` (agent-maintained, always current)
 
 ### `wiki/meta/routing-state.md` (agent-maintained, always current)
 

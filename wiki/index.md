@@ -1,11 +1,11 @@
 ---
-title: TechWiki Index
+title: baseline Index
 category: meta
 tags: [index]
-last_updated: 2026-04-25
+last_updated: 2026-04-26
 ---
 
-# TechWiki — Master Catalog
+# baseline — Master Catalog
 
 > Agent-maintained. Run `wiki_index_rebuild` to regenerate.
 
@@ -68,5 +68,11 @@ last_updated: 2026-04-25
 | Page | Purpose |
 |---|---|
 | [[meta/session-context\|Session Context]] | Active focus, open questions, pending ingests |
-| [[meta/routing-state\|Routing State]] | Current routing scheme and WAN status |
 | [[meta/device-registry\|Device Registry]] | Machine-readable device inventory |
+| [[meta/routing-state\|Routing State]] | Active WAN scheme, router status, gateway IP |
+| [[meta/power-state\|Power State]] | Battery SoC, grid/solar/inverter mode, load watts |
+| [[meta/vpn-state\|VPN State]] | ZeroTier/WireGuard node reachability |
+| [[meta/service-state\|Service State]] | Critical services up/down/degraded |
+| [[meta/backup-state\|Backup State]] | Last successful backup per target |
+| [[meta/cert-state\|Certificate State]] | SSL certificate expiry dates |
+| [[meta/update-state\|Update State]] | Pending firmware/package updates per device |
