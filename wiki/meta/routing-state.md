@@ -1,6 +1,6 @@
 ---
 category: meta
-last_updated: 2026-04-25
+last_updated: 2026-04-26
 ---
 
 # Current Routing State
@@ -9,13 +9,13 @@ last_updated: 2026-04-25
 > See [[../network/routing-schemes|Routing Schemes]] for scheme definitions.
 
 ```yaml
-last_verified: 2026-04-25 00:00
-active_scheme: A          # A | B | C
-active_wan: "UNKNOWN — seed real data"
-primary_router_status: up # up | degraded | down
-standby_router_status: standby  # standby | active-wan | active-gateway
-primary_dhcp_gateway: 192.168.1.1   # PLACEHOLDER — confirm actual IP
-mwan3_status: active      # active | disabled | bypassed
+last_verified: 2026-04-26 09:00
+active_scheme: A
+active_wan: "Fibre (ETH0, openwrt-primary) — primary; LTE via Quectel EC25 (wwan0) — standby/load balance"
+primary_router_status: up
+standby_router_status: standby
+primary_dhcp_gateway: 192.168.1.1
+mwan3_status: active
 manual_override: false
-notes: "Placeholder state — update with real values before relying on this file"
+notes: "Normal operation. No WAN events in last 7 days."
 ```
